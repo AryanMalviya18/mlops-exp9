@@ -1,0 +1,46 @@
+name: MLOps CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install scikit-learn joblib pytest
+
+      - run: python src/train.py
+
+      - run: pytest tests/ -v
+
+  quality-gate:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install scikit-learn joblib
+
+      - run: python src/train.py
+
+      - name: Check accuracy
+        run: |
+          python -c "
+import json
+m = json.load(open('metrics.json'))
+assert m['accuracy'] >= 0.90
+print('Quality gate passed')
+"
